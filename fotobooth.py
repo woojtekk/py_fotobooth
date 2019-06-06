@@ -1,27 +1,22 @@
 import pygame
-import time
-#import picamera
+import pygame.camera
 import cv2
 import shutil
 import os
-import PIL.Image
 import datetime
 import time
 import numpy as np
-from resizeimage import resizeimage
-from imutils import build_montages
 
 
-from threading import Thread
 from pygame.locals import *
 from time import sleep
-from PIL import Image, ImageDraw
 
 
 class camera():
     def __init__(self):
         pygame.init()  # Initialise pygame
         pygame.mouse.set_visible(False)  # hide the mouse cursor
+
         self.infoObject = pygame.display.Info()
 
         self.screen = pygame.display.set_mode((self.infoObject.current_w, self.infoObject.current_h), pygame.FULLSCREEN)  # Full screen
@@ -30,13 +25,20 @@ class camera():
         self.background = pygame.Surface(self.screen.get_size())  # Create the background object
         self.background = self.background.convert()  # Convert it to a background
 
-        # self.screenPicture = pygame.display.set_mode((self.infoObject.current_w, self.infoObject.current_h), pygame.FULLSCREEN)  # Full screen
-        # #self.screenPicture = pygame.display.set_mode((800,600))  # Full screen
-        # self.backgroundPicture = pygame.Surface(self.screenPicture.get_size())  # Create the background object
-        # self.backgroundPicture = self.background.convert()  # Convert it to a background
+        self.screenPicture = pygame.display.set_mode((self.infoObject.current_w, self.infoObject.current_h), pygame.FULLSCREEN)  # Full screen
+        #self.screenPicture = pygame.display.set_mode((800,600))  # Full screen
+        self.backgroundPicture = pygame.Surface(self.screenPicture.get_size())  # Create the background object
+        self.backgroundPicture = self.background.convert()  # Convert it to a background
 
         self.screen.fill(pygame.Color("orange"))  # clear the screen
         pygame.display.flip()
+
+        pygame.camera.init()
+        self.usbcam=pygame.camera.Camera("/dev/video0",(640,480))
+        # self.usbcam.start()
+        # time.sleep(5)
+        # self.usbcam.stop()
+
 
         # self.camera=picamera.PiCamera()
         # camera.resolution = "720p"
@@ -76,7 +78,8 @@ class camera():
         self.screen.blit(img, (x, y))
         pygame.display.flip()
 
-    def UpdateDisplay(self,Message,ImageShowed = False):
+
+    def UpdateDisplay(self,Message,ImageShowed = True):
         pygame.event.get()
 
         self.background.fill(pygame.Color("white"))  # White background
@@ -86,12 +89,13 @@ class camera():
             textpos = text.get_rect()
             textpos.centerx = self.background.get_rect().centerx
             textpos.centery = self.background.get_rect().centery
+
             if (ImageShowed):
                 self.backgroundPicture.blit(text, textpos)
             else:
                 self.background.blit(text, textpos)
 
-        if (ImageShowed == True):
+        if (ImageShowed):
             self.screenPicture.blit(self.backgroundPicture, (0, 0))
         else:
             self.screen.blit(self.background, (0, 0))
@@ -102,6 +106,8 @@ class camera():
 
     def camera_CapturePicture(self):
         #camera.start_preview()
+
+        self.usbcam.start()
         self.UpdateDisplay("let's go ....")
         time.sleep(0.1)
 
@@ -109,18 +115,23 @@ class camera():
         Fname = self.check_file_name(Fname + ".png")
         open(Fname, 'a').close()
         Fname_list=[Fname]
+
         for y in range(1,5,1):
             Fn = self.check_file_name(Fname)
             Fname_list.append(Fn)
+
             for x in range(5, -1, -1):
                 if x == 0: Message = ".... P S T R Y K ......."
                 else:      Message = str(y)+"/4 "+str(x)
                 self.UpdateDisplay(Message,False)
-                time.sleep(1)
+                time.sleep(0.1)
+
             # camera.capture(Fn)
             # open(Fn, 'a').close()
             shutil.copy("ustawienia/start_image.png", Fn)
+
         # camera.stop_previe
+        self.usbcam.stop()
         return Fname_list
 
 
@@ -172,12 +183,12 @@ class camera():
         sprite.image = image
         sprite.rect = image.get_rect()
 
-        font = pygame.font.SysFont('Calibri', 100, bold=True)
+        font = pygame.font.SysFont('Milkshake', 200, bold=False)
         text = font.render(' Drukowanie ...... ', True, (227, 157, 200))
-        sprite.image.blit(text, ( int(self.screen.get_rect().centerx/2) , int(self.screen.get_rect().centery/2) ))
-        #
+        sprite.image.blit(text, ( int(self.screen.get_rect().centerx/2) , int(self.screen.get_rect().centery/4) ))
+
         text = font.render('...... troche to potrwa ', True, (227, 157, 200))
-        sprite.image.blit(text, ( int(self.screen.get_rect().centerx/2) , int(self.screen.get_rect().centery/2)+300 ))
+        sprite.image.blit(text, ( int(self.screen.get_rect().centerx/4) , int(self.screen.get_rect().centery/0.75)))
 
         group = pygame.sprite.Group()
         group.add(sprite)
@@ -190,7 +201,7 @@ if __name__ == '__main__':
     start = time.time()
     c=camera()
     c.camera_show_image("./ustawienia/start_image.png")
-    time.sleep(5)
+    time.sleep(1)
 
     c.camera_sequence()
     print("caly program ", time.time()-start)
