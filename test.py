@@ -1,29 +1,25 @@
-import queue
 import threading
 import pygame
 import pygame.camera
-import datetime
 import time
-import os
 
 
 
 class display(threading.Thread):
 
-    def __init__(self, q, loop_time = 1.0/60):
-        self.q = q
-        self.timeout = loop_time
+    def __init__(self):
         super(display, self).__init__()
+
         pygame.init()
-        pygame.mouse.set_visible(True)
+        pygame.mouse.set_visible(False)
         # infoObject = pygame.display.Info()
         # size=((int(infoObject.current_w), int(infoObject.current_h)))
         size=(800,600)
         self.lcd = pygame.display.set_mode(size)#,pygame.FULLSCREEN)
-        self.tt="............."
-        self.x=0
         self.lcd.fill((0,0,255))
-
+        self.tt=""
+        self.x=0
+        self.Message="hahaha"
         pygame.display.update()
         pygame.camera.init()
 
@@ -34,22 +30,13 @@ class display(threading.Thread):
         self.surf = pygame.Surface(size)
 
 
-    def onThread(self, function, *args, **kwargs):
-        self.q.put((function, args, kwargs))
 
     def run(self):
         self.go()
 
-    def txt(self,lcd):
-        #self.tt=str(datetime.datetime.now())
-        color=(0,0,255)
 
-        text_surface = self.font_big.render(self.tt, True, color)
-        rect = text_surface.get_rect(center=(88, 72))
-        lcd.blit(text_surface, rect)
 
     def txt2(self):
-        print(self.tt,"--------------",self.x)
         self.x=self.x+1
         self.tt=self.x
 
@@ -58,30 +45,44 @@ class display(threading.Thread):
             # lcd.fill(RED)
             self.cam.get_image(self.surf)
             self.lcd.blit(self.surf, (0, 0))
-            self.txt(self.lcd)
+            self.text()
             pygame.display.update()
+            pygame.event.get()
+
+
+    def get_img(self,fname="img.png"):
+        img=self.cam.get_image(self.surf)
+        pygame.image.save(img,fname)
+
+    def txt(self,lcd):
+        #self.tt=str(datetime.datetime.now())
+        color=(0,0,255)
+        text_surface = self.font_big.render(str(self.tt), True, color)
+        rect = text_surface.get_rect(center=(88, 72))
+        lcd.blit(text_surface, rect)
+
+    def text(self):
+        if (self.Message != ""):
+            # self.lcd.fill(pygame.Color("white"))  # White background
+            font = pygame.font.Font(None, 60)
+            text = font.render(str(self.Message), 1, (227, 157, 200))
+            textpos = text.get_rect()
+            textpos.centerx = self.lcd.get_rect().centerx
+            textpos.centery = self.lcd.get_rect().centery
+            self.lcd.blit(text, textpos)
 
 
 
 
 
-someClass = display(1)
+
+someClass = display()
 someClass.start()
 time.sleep(2)
-while True:
-    print("ssss")
+
+x=0
+while x<=10:
+    x+=1
     someClass.txt2()
-    time.sleep(2)
+    time.sleep(1)
 
-
-
-
-#
-# t1 = Thread(target=display)
-# t1.daemon = False
-# #t2 = Thread(target=display2)
-# #t2.daemon = False
-#
-#
-# t1.start()
-# #t2.start()

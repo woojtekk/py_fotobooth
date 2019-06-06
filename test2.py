@@ -1,43 +1,82 @@
-import time
+#/usr/bin/env python
+# coding: utf-8
+
 import pygame
 import pygame.camera
 from pygame.locals import *
+import time
 
-DEVICE = '/dev/video0'
-SIZE = (640, 480)
-FILENAME = 'capture.png'
-
-def camstream():
-    pygame.init()
-    pygame.camera.init()
-
-    pygame.mouse.set_visible(False)  # hide the mouse cursor
-
-    infoObject = pygame.display.Info()
-
-    screen = pygame.display.set_mode(( infoObject.current_w,  infoObject.current_h),
-                                          pygame.FULLSCREEN)  # Full screen
-    #  screen = pygame.display.set_mode((800,600))  # Full screen
-
-    background = pygame.Surface( screen.get_size())  # Create the background object
-    background =  background.convert()  # Convert it to a background
+pygame.init()
+pygame.camera.init()
 
 
+class Capture(object):
+    def __init__(self,width=640,heigh=480):
+        self.size = (width,heigh)
+        self.display = pygame.display.set_mode(self.size, 0,)
+        self.clist = pygame.camera.list_cameras()
+        if not self.clist:
+            raise ValueError("Sorry, no cameras detected!")
+        self.cam = pygame.camera.Camera(self.clist[0], self.size, 'RGB') #  RGB HSV YUV
+        self.cam.start()
+        self.cam.set_controls(hflip = True,vflip = True,brightness =10)  #
+        print (self.cam.get_controls())
+        self.snapshot = pygame.Surface(self.size, 0, self.display)
+        self.thresholded = pygame.surface.Surface(self.size, 0, self.display)
 
-    #display = pygame.display.set_mode(SIZE, 0)
-    camera = pygame.camera.Camera(DEVICE, SIZE)
-    camera.start()
+    def get_and_flip(self):
+        if self.cam.query_image():
+            self.snapshot = self.cam.get_image()
+        self.display.blit(self.snapshot, (0,0))
+        pygame.display.flip()
 
-    #screen = pygame.surface.Surface(SIZE, 0, background)
-    while True:
-        sc = camera.get_image(screen)
-        background.blit(sc,(0,0))
-        #display.blit(screen, (0,0))
-        pygame.background.flip()
+    def live(self):
+        going = True
+        while going:
+            events = pygame.event.get()
+            for e in events:
+                if e.type == QUIT or (e.type == KEYDOWN and e.key == K_ESCAPE):
+                    self.cam.stop()
+                    pygame.display.quit()
+                    exit()
+                    going = False
+            if e.type == KEYDOWN:
+                if pygame.key.get_pressed()[K_LCTRL] and pygame.key.get_pressed()[K_s]:
+                    pygame.image.save(self.snapshot,'%s.jpg' %int(time.time()))
+                    print ('save jpg')
+                if e.key == K_m:
+                    print ('m')
+                    pygame.transform.threshold(self.thresholded,self.snapshot,self.ccolor,(30,30,30),(0,0,0),1)
+                    pygame.image.save(self.thresholded,'%s.jpg' %self.cc )
 
-    camera.stop()
-    pygame.quit()
-    return
+            self.get_and_flip()
+
+class effect(Capture):
+
+    def get_and_flip(self):
+        self.snapshot = self.cam.get_image(self.snapshot)
+        self.display.blit(self.snapshot,(0,0))
+        crect = pygame.draw.rect(self.display, (255,0,0,), (305,225,30,30), 2)
+        self.ccolor = pygame.transform.average_color(self.snapshot, crect)
+        self.cc = "-".join([ str(i) for i in list(self.ccolor[0:3]) ])
+        self.display.fill(self.ccolor, (0,0,50,50))
+        pygame.display.flip()
+
+    # def get_and_flip(self):
+    #     self.snapshot = self.cam.get_image(self.snapshot)
+    #     # threshold against the color we got before
+    #     mask = pygame.mask.from_threshold(self.snapshot, self.ccolor, (30, 30, 30))
+    #     self.display.blit(self.snapshot,(0,0))
+    #     # keep only the largest blob of that color
+    #     connected = mask.connected_component()
+    #     # make sure the blob is big enough that it isn't just noise
+    #     if mask.count() > 100:
+    #         # find the center of the blob
+    #         coord = mask.centroid()
+    #         # draw a circle with size variable on the size of the blob
+    #         pygame.draw.circle(self.display, (0,255,0), coord, max(min(50,mask.count()/400),5))
+    #     pygame.display.flip()
 
 if __name__ == '__main__':
-    camstream()
+    camera = effect()
+    camera.live()
